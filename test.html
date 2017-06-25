@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+		<style type="text/css">
+
+		</style>
+	</head>
+
+	<body>
+		<canvas id="canvas" width="600" height="500"></canvas>
+		<button type="button" onclick="encode()">压缩</button>
+		<img src="" id="encOutputWebPImage" alt="" />
+	</body>
+	<script src="webp.js" type="text/javascript" charset="utf-8"></script>
+	<script type="text/javascript">
+		var canvas = document.getElementById('canvas');
+		var ctx = canvas.getContext('2d');
+
+		canvas.addEventListener('dragenter', function(e) {
+			e.preventDefault();
+			e.stopPropagation();
+		});
+		canvas.addEventListener('dragover', function(e) {
+			e.preventDefault();
+			e.stopPropagation();
+		});
+		canvas.addEventListener('drop', function(e) {
+			e.preventDefault();
+			var files = e.dataTransfer.files;
+			var fileReader = new FileReader();
+			fileReader.onload = function(e) {
+				ImageToCanvas(e.target.result);
+			};
+			fileReader.readAsDataURL(files[0]);
+		})
+
+		function ImageToCanvas(imgdata) {
+			var img = document.createElement("img")
+			img.src = imgdata;
+			img.onload = function() {
+				ctx.clearRect(0, 0, canvas.width, canvas.height);
+				canvas.width = img.width;	
+				canvas.height = img.height;
+				ctx.drawImage(img, 0, 0, img.width, img.height);
+			}
+		}
+
+		function encode() {
+			var start = +new Date();
+			var input = ctx.getImageData(0, 0, canvas.width, canvas.height);
+			var w = input.width,
+				h = input.height;
+			var inputData = input.data;
+			var out = {
+				output: ''
+			};
+			var encoder = new WebPEncoder();
+			var
+				config = new Object()
+			config.target_size = 0; // if non-zero, set the desired target size in bytes. Takes precedence over the 'compression' parameter.
+			config.target_PSNR = 0.; // if non-zero, specifies the minimal distortion to	try to achieve. Takes precedence over target_size.
+			config.method = 0; // quality/speed trade-off (0=fast, 6=slower-better)
+			config.sns_strength = 50; // Spatial Noise Shaping. 0=off, 100=maximum.
+			config.filter_strength = 20; // range: [0 = off .. 100 = strongest]
+			config.filter_sharpness = 0; // range: [0 = off .. 7 = least sharp]
+			config.filter_type = 0; // filtering type: 0 = simple, 1 = strong (only used if filter_strength > 0 or autofilter > 0)
+			config.partitions = 0; // log2(number of token partitions) in [0..3] Default is set to 0 for easier progressive decoding.
+			config.segments = 4; // maximum number of segments to use, in [1..4]
+			config.pass = 1; // number of entropy-analysis passes (in [1..10]).
+			config.show_compressed = 0; // if true, export the compressed picture back. In-loop filtering is not applied.
+			config.preprocessing = 0; // preprocessing filter (0=none, 1=segment-smooth)
+			config.autofilter = 0; // Auto adjust filter's strength [0 = off, 1 = on]
+			config.partition_limit = 0;
+			//  --- description from libwebp-C-Source Code --- 
+			config.extra_info_type = 2; // print extra_info
+			config.preset = 0; // 0: default, 1: picture, 2: photo, 3: drawing, 4: icon, 5: text
+
+			//set Config; default config -> WebPConfig( null ) 
+			encoder.WebPEncodeConfig(config); //when you set the config you 
+			var size = encoder.WebPEncodeRGBA(inputData, canvas.width, canvas.height, canvas.width * 4, 80, out); //w*4 desc: w = width, 3:RGB/BGR, 4:RGBA/BGRA 
+			var end = +new Date();
+			console.log(end - start);
+			var base64URI = btoa(out.output);
+			document.getElementById('encOutputWebPImage').src = "data:image/webp;base64," + base64URI;
+		}
+	</script>
+
+</html>
